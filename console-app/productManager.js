@@ -41,10 +41,8 @@ class ProductManager {
     }
   }
   
-  // Crear una instancia de ProductManager
   const productManager = new ProductManager();
   
-  // Agregar un producto
   try {
     productManager.addProduct({
       title: "producto prueba",
@@ -59,17 +57,15 @@ class ProductManager {
     console.error("Error al agregar el producto:", error.message);
   }
   
-  // Obtener lista de productos
   console.log("Lista de productos:", productManager.getProducts());
   
-  // Intentar agregar un producto con el mismo código
   try {
     productManager.addProduct({
       title: "producto repetido",
       description: "Este es un producto repetido",
       price: 150,
       thumbnail: "Sin imagen",
-      code: "abc123", // Código repetido
+      code: "abc123",
       stock: 10,
     });
     console.log("Producto agregado con éxito.");
@@ -77,9 +73,8 @@ class ProductManager {
     console.error("Error al agregar el producto:", error.message);
   }
   
-  // Obtener producto por ID
   try {
-    const productId = productManager.getProducts()[0].id; // Obtener el ID del primer producto
+    const productId = productManager.getProducts()[0].id;
     const foundProduct = productManager.getProductById(productId);
     console.log("Producto encontrado:", foundProduct);
   } catch (error) {

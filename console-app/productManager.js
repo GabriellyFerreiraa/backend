@@ -1,82 +1,73 @@
+const fs = require('fs');
+
 class ProductManager {
-    constructor() {
-      this.products = [];
+    constructor(path) {
+        this.path = path;
     }
-  
-    getProducts() {
-      return this.products;
+
+    async addProduct(product) {
+        try {
+            const products = await this.getProducts();
+            product.id = products.length > 0 ? products[products.length - 1].id + 1 : 1;
+            products.push(product);
+            await this.saveProducts(products);
+        } catch (error) {
+            throw new Error('Error adding product: ' + error.message);
+        }
     }
-  
-    addProduct(productData) {
-      const existingProduct = this.products.find(product => product.code === productData.code);
-      if (existingProduct) {
-        throw new Error("Product with the same code already exists.");
-      }
-  
-      const id = this.generateUniqueId();
-      const newProduct = {
-        id,
-        ...productData,
-      };
-  
-      this.products.push(newProduct);
-      return newProduct;
+
+    async getProducts() {
+        try {
+            const data = await fs.promises.readFile(this.path, 'utf-8');
+            return JSON.parse(data);
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                return [];
+            } else {
+                throw new Error('Error getting products: ' + error.message);
+            }
+        }
     }
-  
-    getProductById(productId) {
-      const product = this.products.find(product => product.id === productId);
-      if (!product) {
-        throw new Error("Product not found.");
-      }
-      return product;
+
+    async getProductById(id) {
+        try {
+            const products = await this.getProducts();
+            return products.find(product => product.id === id);
+        } catch (error) {
+            throw new Error('Error getting product by ID: ' + error.message);
+        }
     }
-  
-    generateUniqueId() {
-      const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-      let id;
-      do {
-        id = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-      } while (this.products.some(product => product.id === id));
-      return id;
+
+    async updateProduct(id, updatedFields) {
+        try {
+            const products = await this.getProducts();
+            const index = products.findIndex(product => product.id === id);
+            if (index !== -1) {
+                products[index] = { ...products[index], ...updatedFields };
+                await this.saveProducts(products);
+            }
+        } catch (error) {
+            throw new Error('Error updating product: ' + error.message);
+        }
     }
-  }
-  
-  const productManager = new ProductManager();
-  
-  try {
-    productManager.addProduct({
-      title: "producto prueba",
-      description: "Este es un producto prueba",
-      price: 200,
-      thumbnail: "Sin imagen",
-      code: "abc123",
-      stock: 25,
-    });
-    console.log("Producto agregado con éxito.");
-  } catch (error) {
-    console.error("Error al agregar el producto:", error.message);
-  }
-  
-  console.log("Lista de productos:", productManager.getProducts());
-  
-  try {
-    productManager.addProduct({
-      title: "producto repetido",
-      description: "Este es un producto repetido",
-      price: 150,
-      thumbnail: "Sin imagen",
-      code: "abc123",
-      stock: 10,
-    });
-    console.log("Producto agregado con éxito.");
-  } catch (error) {
-    console.error("Error al agregar el producto:", error.message);
-  }
-  
-  try {
-    const productId = productManager.getProducts()[0].id;
-    const foundProduct = productManager.getProductById(productId);
-    console.log("Producto encontrado:", foundProduct);
-  } catch (error) {
-    console.error("Error al obtener el producto:", error.message);
-  }
+
+    async deleteProduct(id) {
+        try {
+            const products = await this.getProducts();
+            const updatedProducts = products.filter(product => product.id !== id);
+            await this.saveProducts(updatedProducts);
+        } catch (error) {
+            throw new Error('Error deleting product: ' + error.message);
+        }
+    }
+
+    async saveProducts(products) {
+        try {
+            await fs.promises.writeFile(this.path, JSON.stringify(products, null, 2));
+        } catch (error) {
+            throw new Error('Error saving products: ' + error.message);
+        }
+    }
+}
+
+module.exports = ProductManager;

@@ -1,73 +1,93 @@
 const fs = require('fs');
 
 class ProductManager {
-    constructor(path) {
-        this.path = path;
+    constructor() {
+        this.path = 'archivoProductos.txt';
+        this.loadProducts();
     }
 
-    async addProduct(product) {
+    loadProducts() {
         try {
-            const products = await this.getProducts();
-            product.id = products.length > 0 ? products[products.length - 1].id + 1 : 1;
-            products.push(product);
-            await this.saveProducts(products);
+            const data = fs.readFileSync(this.path, 'utf-8');
+            this.products = JSON.parse(data);
         } catch (error) {
-            throw new Error('Error adding product: ' + error.message);
+            this.products = [];
         }
     }
 
-    async getProducts() {
-        try {
-            const data = await fs.promises.readFile(this.path, 'utf-8');
-            return JSON.parse(data);
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                return [];
-            } else {
-                throw new Error('Error getting products: ' + error.message);
-            }
-        }
+    saveProducts() {
+        fs.writeFileSync(this.path, JSON.stringify(this.products));
     }
 
-    async getProductById(id) {
-        try {
-            const products = await this.getProducts();
-            return products.find(product => product.id === id);
-        } catch (error) {
-            throw new Error('Error getting product by ID: ' + error.message);
+    addProduct(title, description, price, thumbnail, code, stock) {
+        const existingProduct = this.products.find(prod => prod.code === code);
+        if (existingProduct) {
+            console.log(`Error: El producto ${title} no se pudo agregar porque el código está duplicado.`);
+            return;
         }
+
+        const newProduct = {
+            id: this.products.length > 0 ? this.products[this.products.length - 1].id + 1 : 1,
+            title,
+            description,
+            price,
+            thumbnail,
+            code,
+            stock
+        };
+
+        this.products.push(newProduct);
+        this.saveProducts();
+        console.log(`Producto "${title}" agregado con éxito.`);
     }
 
-    async updateProduct(id, updatedFields) {
-        try {
-            const products = await this.getProducts();
-            const index = products.findIndex(product => product.id === id);
-            if (index !== -1) {
-                products[index] = { ...products[index], ...updatedFields };
-                await this.saveProducts(products);
-            }
-        } catch (error) {
-            throw new Error('Error updating product: ' + error.message);
-        }
+    getProducts() {
+        console.log(this.products);
     }
 
-    async deleteProduct(id) {
-        try {
-            const products = await this.getProducts();
-            const updatedProducts = products.filter(product => product.id !== id);
-            await this.saveProducts(updatedProducts);
-        } catch (error) {
-            throw new Error('Error deleting product: ' + error.message);
+    getProductById(idFind) {
+        const product = this.products.find(prod => prod.id === idFind);
+        if (!product) {
+            console.log(`Error: El producto con id ${idFind} no existe.`);
+            return;
         }
+        console.log(product);
     }
 
-    async saveProducts(products) {
-        try {
-            await fs.promises.writeFile(this.path, JSON.stringify(products, null, 2));
-        } catch (error) {
-            throw new Error('Error saving products: ' + error.message);
+    updateProduct(idFind, campoCambiar, valorCambiar) {
+        const product = this.products.find(prod => prod.id === idFind);
+        if (!product) {
+            console.log(`Error: El producto con id ${idFind} no existe.`);
+            return;
         }
+
+        if (!product.hasOwnProperty(campoCambiar)) {
+            console.log(`Error: El campo ${campoCambiar} no existe en el producto.`);
+            return;
+        }
+
+        product[campoCambiar] = valorCambiar;
+        this.saveProducts();
+        console.log(`El campo ${campoCambiar} del producto con id ${idFind} fue cambiado a ${valorCambiar}.`);
+    }
+
+    deleteProduct(idFind) {
+        const index = this.products.findIndex(prod => prod.id === idFind);
+        if (index === -1) {
+            console.log(`Error: El producto con id ${idFind} no existe.`);
+            return;
+        }
+
+        this.products.splice(index, 1);
+        this.saveProducts();
+        console.log(`El producto con id ${idFind} fue eliminado.`);
     }
 }
 
-module.exports = ProductManager;
+const postProduct = new ProductManager();
+postProduct.addProduct('Producto prueba', 'Este producto es una prueba', 200, 'Sin imagen', 'abc123', 25);
+postProduct.addProduct('Producto prueba2', 'Este producto es una prueba', 21, 'Sin imagen', 'abc124', 25);
+postProduct.getProducts();
+postProduct.updateProduct(1, 'title', 'Título cambiado');
+postProduct.deleteProduct(1);
+postProduct.getProductById(2);

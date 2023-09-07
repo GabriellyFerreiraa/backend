@@ -1,93 +1,135 @@
-const fs = require('fs');
+const express = require("express");
+const fs = require("fs");
+const app = express();
+const port = 8080;
 
-class ProductManager {
-    constructor() {
-        this.path = 'archivoProductos.txt';
-        this.loadProducts();
+app.use(express.json());
+
+const productsRouter = express.Router();
+app.use("/api/products", productsRouter);
+
+const cartsRouter = express.Router();
+app.use("/api/carts", cartsRouter);
+
+const readDataFromJSON = (filename) => {
+  try {
+    const data = fs.readFileSync(filename, "utf-8");
+    return JSON.parse(data);
+  } catch (error) {
+    return [];
+  }
+};
+
+const writeDataToJSON = (filename, data) => {
+  fs.writeFileSync(filename, JSON.stringify(data, null, 2));
+};
+
+productsRouter.get("/", (req, res) => {
+  const products = readDataFromJSON("productos.json");
+
+  const limit = req.query.limit;
+  if (limit) {
+    res.json(products.slice(0, limit));
+  } else {
+    res.json(products);
+  }
+});
+
+productsRouter.get("/:pid", (req, res) => {
+  const productId = req.params.pid;
+  const products = readDataFromJSON("productos.json");
+  const product = products.find((product) => product.id === productId);
+  if (product) {
+    res.json(product);
+  } else {
+    res.status(404).json({ error: "Producto no encontrado" });
+  }
+});
+
+productsRouter.post("/", (req, res) => {
+  const newProduct = req.body;
+  const products = readDataFromJSON("productos.json");
+
+  newProduct.id = Date.now().toString();
+  products.push(newProduct);
+  writeDataToJSON("productos.json", products);
+  res.status(201).json(newProduct);
+});
+
+productsRouter.put("/:pid", (req, res) => {
+  const productId = req.params.pid;
+  const updatedProduct = req.body;
+  const products = readDataFromJSON("productos.json");
+  const index = products.findIndex((product) => product.id === productId);
+  if (index !== -1) {
+    products[index] = { ...products[index], ...updatedProduct };
+    writeDataToJSON("productos.json", products);
+    res.json(products[index]);
+  } else {
+    res.status(404).json({ error: "Producto no encontrado" });
+  }
+});
+
+productsRouter.delete("/:pid", (req, res) => {
+  const productId = req.params.pid;
+  const products = readDataFromJSON("productos.json");
+  const index = products.findIndex((product) => product.id === productId);
+  if (index !== -1) {
+    products.splice(index, 1);
+    writeDataToJSON("productos.json", products);
+    res.json({ message: "Producto eliminado" });
+  } else {
+    res.status(404).json({ error: "Producto no encontrado" });
+  }
+});
+
+cartsRouter.post("/", (req, res) => {
+  const newCart = req.body;
+  const carts = readDataFromJSON("carrito.json");
+
+  newCart.id = Date.now().toString();
+  carts.push(newCart);
+  writeDataToJSON("carrito.json", carts);
+  res.status(201).json(newCart);
+});
+
+cartsRouter.get("/:cid", (req, res) => {
+  const cartId = req.params.cid;
+  const carts = readDataFromJSON("carrito.json");
+  const cart = carts.find((cart) => cart.id === cartId);
+  if (cart) {
+    res.json(cart);
+  } else {
+    res.status(404).json({ error: "Carrito no encontrado" });
+  }
+});
+
+cartsRouter.post("/:cid/product/:pid", (req, res) => {
+  const cartId = req.params.cid;
+  const productId = req.params.pid;
+  const quantity = req.body.quantity || 1;
+  const carts = readDataFromJSON("carrito.json");
+  const products = readDataFromJSON("productos.json");
+  const cart = carts.find((cart) => cart.id === cartId);
+  const product = products.find((product) => product.id === productId);
+
+  if (!cart) {
+    res.status(404).json({ error: "Carrito no encontrado" });
+  } else if (!product) {
+    res.status(404).json({ error: "Producto no encontrado" });
+  } else {
+    const existingProduct = cart.products.find((item) => item.id === productId);
+    if (existingProduct) {
+      existingProduct.quantity += quantity;
+    } else {
+      cart.products.push({ id: productId, quantity });
     }
 
-    loadProducts() {
-        try {
-            const data = fs.readFileSync(this.path, 'utf-8');
-            this.products = JSON.parse(data);
-        } catch (error) {
-            this.products = [];
-        }
-    }
+    writeDataToJSON("carrito.json", carts);
+    res.status(201).json(cart);
+  }
+});
 
-    saveProducts() {
-        fs.writeFileSync(this.path, JSON.stringify(this.products));
-    }
-
-    addProduct(title, description, price, thumbnail, code, stock) {
-        const existingProduct = this.products.find(prod => prod.code === code);
-        if (existingProduct) {
-            console.log(`Error: El producto ${title} no se pudo agregar porque el código está duplicado.`);
-            return;
-        }
-
-        const newProduct = {
-            id: this.products.length > 0 ? this.products[this.products.length - 1].id + 1 : 1,
-            title,
-            description,
-            price,
-            thumbnail,
-            code,
-            stock
-        };
-
-        this.products.push(newProduct);
-        this.saveProducts();
-        console.log(`Producto "${title}" agregado con éxito.`);
-    }
-
-    getProducts() {
-        console.log(this.products);
-    }
-
-    getProductById(idFind) {
-        const product = this.products.find(prod => prod.id === idFind);
-        if (!product) {
-            console.log(`Error: El producto con id ${idFind} no existe.`);
-            return;
-        }
-        console.log(product);
-    }
-
-    updateProduct(idFind, campoCambiar, valorCambiar) {
-        const product = this.products.find(prod => prod.id === idFind);
-        if (!product) {
-            console.log(`Error: El producto con id ${idFind} no existe.`);
-            return;
-        }
-
-        if (!product.hasOwnProperty(campoCambiar)) {
-            console.log(`Error: El campo ${campoCambiar} no existe en el producto.`);
-            return;
-        }
-
-        product[campoCambiar] = valorCambiar;
-        this.saveProducts();
-        console.log(`El campo ${campoCambiar} del producto con id ${idFind} fue cambiado a ${valorCambiar}.`);
-    }
-
-    deleteProduct(idFind) {
-        const index = this.products.findIndex(prod => prod.id === idFind);
-        if (index === -1) {
-            console.log(`Error: El producto con id ${idFind} no existe.`);
-            return;
-        }
-
-        this.products.splice(index, 1);
-        this.saveProducts();
-        console.log(`El producto con id ${idFind} fue eliminado.`);
-    }
-}
-
-const postProduct = new ProductManager();
-postProduct.addProduct('Producto prueba', 'Este producto es una prueba', 200, 'Sin imagen', 'abc123', 25);
-postProduct.addProduct('Producto prueba2', 'Este producto es una prueba', 21, 'Sin imagen', 'abc124', 25);
-postProduct.getProducts();
-postProduct.updateProduct(1, 'title', 'Título cambiado');
-postProduct.deleteProduct(1);
-postProduct.getProductById(2);
+app.listen(port, () => {
+  console.log(`Servidor escuchando en el puerto ${port}`);
+});

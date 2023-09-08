@@ -29,7 +29,7 @@ productsRouter.get("/", (req, res) => {
 
   const limit = req.query.limit;
   if (limit) {
-    res.json(products.slice(0, limit));
+    res.json(products.slice(0, parseInt(limit))); // Convierte limit a entero
   } else {
     res.json(products);
   }
@@ -50,7 +50,24 @@ productsRouter.post("/", (req, res) => {
   const newProduct = req.body;
   const products = readDataFromJSON("productos.json");
 
+  if (
+    !newProduct.title ||
+    !newProduct.description ||
+    !newProduct.code ||
+    isNaN(newProduct.price) ||
+    isNaN(newProduct.stock) ||
+    !newProduct.category
+  ) {
+    res
+      .status(400)
+      .json({ error: "Campos obligatorios faltantes o inválidos" });
+    return;
+  }
+
   newProduct.id = Date.now().toString();
+  newProduct.status = true; // Establecer status en true por defecto
+  newProduct.thumbnails = req.body.thumbnails || [];
+
   products.push(newProduct);
   writeDataToJSON("productos.json", products);
   res.status(201).json(newProduct);
@@ -62,7 +79,9 @@ productsRouter.put("/:pid", (req, res) => {
   const products = readDataFromJSON("productos.json");
   const index = products.findIndex((product) => product.id === productId);
   if (index !== -1) {
-    products[index] = { ...products[index], ...updatedProduct };
+    // No actualizar el id
+    updatedProduct.id = productId;
+    products[index] = updatedProduct;
     writeDataToJSON("productos.json", products);
     res.json(products[index]);
   } else {
@@ -88,6 +107,7 @@ cartsRouter.post("/", (req, res) => {
   const carts = readDataFromJSON("carrito.json");
 
   newCart.id = Date.now().toString();
+  newCart.products = []; // Inicializar el arreglo de productos vacío
   carts.push(newCart);
   writeDataToJSON("carrito.json", carts);
   res.status(201).json(newCart);

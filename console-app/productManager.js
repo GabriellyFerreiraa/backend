@@ -1,6 +1,18 @@
+import express from "express";
+import mongoose from "mongoose";
+
 const express = require("express");
+const expressHandlebars = require("express-handlebars");
+const http = require("http");
+const socketIo = require("socket.io");
 const fs = require("fs");
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
+
+app.engine("handlebars", expressHandlebars());
+app.set("view engine", "handlebars");
+
 const port = 8080;
 
 app.use(express.json());
@@ -150,6 +162,53 @@ cartsRouter.post("/:cid/product/:pid", (req, res) => {
   }
 });
 
-app.listen(port, () => {
+const emitProductChanges = () => {
+  const products = readDataFromJSON("productos.json");
+  io.emit("productChanges", products);
+};
+
+app.get("/realtimeproducts", (req, res) => {
+  const products = readDataFromJSON("productos.json");
+  res.render("realTimeProducts", { products });
+});
+
+io.on("connection", (socket) => {
+  console.log("Cliente conectado");
+
+  socket.on("createProduct", (newProduct) => {
+    const products = readDataFromJSON("productos.json");
+    products.push(newProduct);
+    writeDataToJSON("productos.json", products);
+
+    emitProductChanges();
+  });
+
+  socket.on("deleteProduct", (productId) => {
+    const products = readDataFromJSON("productos.json");
+    const index = products.findIndex((product) => product.id === productId);
+    if (index !== -1) {
+      products.splice(index, 1);
+      writeDataToJSON("productos.json", products);
+
+      emitProductChanges();
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Cliente desconectado");
+  });
+});
+
+mongoose.connect(
+  "mongodb+srv://gabiferreira10:<password>@cluster0.fqjjdea.mongodb.net/?retryWrites=true&w=majority",
+  (error) => {
+    if (error) {
+      console.log("Cannot connect to database: " + error);
+      process.exit();
+    }
+  }
+);
+
+server.listen(port, () => {
   console.log(`Servidor escuchando en el puerto ${port}`);
 });

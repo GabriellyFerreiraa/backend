@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
 
-export const modelUsuarios=mongoose.model('usuarios', new mongoose.Schema({
+export const modeloUsuarios=mongoose.model('usuarios', new mongoose.Schema({
   nombre: String,
   email: {
     type: String, unique: true

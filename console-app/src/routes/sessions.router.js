@@ -1,25 +1,35 @@
-import { Router } from "express";
-import crypto from 'crypto';
-import {modeloUsuarios} from '../models/usuarios.models.js'
-export const router=Router()
+import { MiRouter } from "./router.js";
+import jwt from 'jsonwebtoken'
 
-router.post('/registro',async(req,res)=>{
-  let {nombre, email, password}=req.body
-
-  if(!nombre || !email || !password){
-    return res.status(400).send('faltan datos')
+let usuarios=[
+  {
+    nombre:'Diego', email:'diego@test.com',
+    password:'123', rol:'usuario'
+  },
+  {
+    nombre:'Juan', email:'juan@test.com',
+    password:'123', rol:'comprador'
+  },
+  {
+    nombre:'Romina', email: 'romina@test.com',
+    password:'123', rol:'admin'
   }
+]
 
-  let existe=await modeloUsuarios.findOne({email})
-  if(existe){
-    return res.satus(400).send(`Usuario ya esta registrado: ${email}`)
+export class SessionsRouter extends MiRouter{
+
+  init(){
+    this.post('/login', ['PUBLIC'], (req,res)=>{
+      let {email, password}=req.body
+      if(!email || !password) return res.errorCliente('Complete email y password')
+
+      let usuario=usuarios.find(u=>u.email===email && u.password===password)
+      if(!usuario) return res.errorCliente('Credenciales incorrectas')
+
+      let token=jwt.sign({usuario}, "coder123", {expiresIn:'1h'})
+
+      res.cookie('coderCookie', token, {httpOnly:true})
+      res.success(`Usuario ${usuario.nombre} logueado con el rol ${usuario.rol}`)
+    })
   }
-
-  password=crypto.createHmac('sha256','palabraSecreta').update(password).digest('base64')
-
-  await modeloUsuarios.create({
-    nombre, email, password
-  })
-  
-  res.redirect(`/login?usuarioCreado=${email}`)
-})
+}

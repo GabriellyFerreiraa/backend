@@ -1,39 +1,25 @@
-import __dirname from './utils.js';
-import path from 'path';
 import express from 'express';
-import {engine} from 'express-handlebars';
-import mongoose from 'mongoose';
-import { router as vistasRouter } from './routes/vistas.router.js';
-import { router as sessionsRouter } from './routes/sessions.router.js';
+import cookieParser from 'cookie-parser';
+import { router as heroesRouter } from './routes/heroes.router.js';
+import { UsuariosRouter } from './routes/usuarios.router.js';
+import { SessionsRouter } from './routes/sessions.router.js'; 
 
+const PORT = 3000;
 
-const PORT=3000;
-
-const app=express();
-
-app.engine('handlebars', engine());
-app.set('view engine', 'handlebars');
-app.set('views', path.join(__dirname, '/views'));
+const app = express();
+const usuariosRouter = new UsuariosRouter();
+const sessionsRouter = new SessionsRouter(); 
 
 app.use(express.json());
-app.use(express.urlencoded({extended:true}));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-app.use(express.static(path.join(__dirname,'/public')));
+app.use('/api/heroes', heroesRouter);
+app.use('/api/usuarios', usuariosRouter.getRouter());
+app.use('/api/sessions', sessionsRouter.getRouter());
 
-app.use('/', vistasRouter)
-app.use('/api/sessions', sessionsRouter)
-
-const server=app.listen(PORT,()=>{
-    console.log(`Server  escuchando en puerto ${PORT}`);
+const server = app.listen(PORT, () => {
+    console.log(`Server escuchando en puerto ${PORT}`);
 });
 
-const conectar=async()=>{
-    try{
-        await mongoose.connect('mongosh "mongodb+srv://cluster0.y3nve1p.mongodb.net/" --apiVersion 1 --username gabiferreira101')
-        console.log('Conexcion a DB establecida')
-    } catch(err){
-        console.log('Error al conectar con el servidor')
-    }
-}
-
-conectar();
+server.on('error', (error) => console.log(error));

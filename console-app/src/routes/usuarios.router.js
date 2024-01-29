@@ -1,25 +1,25 @@
-import { MiRouter } from "./router.js";
+const { MiRouter } = require('./router');
 
-export class UsuariosRouter extends MiRouter {
-    mid01(req, res, next) {
-        console.log('pasó por un middleware (método de la clase)...!!!');
-        next();
+class UsuariosRouter extends MiRouter {
+    mostrarAdminPanel(req, res) {
+        res.render('admin-panel');
     }
 
     init() {
-        this.get('/', ['USUARIO', 'ADMIN'], this.mid01, (req, res, next) => {
-            console.log('pasó por un middleware...!!');
-            next();
-        }, (req, res) => {
+        this.get('/', ['USUARIO', 'ADMIN'], (req, res) => {
             res.success('¡Funcionará todo esto?');
-        })
+        });
 
-        this.get('/compras', ['COMPRADOR', 'ADMIN'], (req,res)=>{
-            res.success('Compras Page')
-        })
+        this.get('/compras', ['COMPRADOR', 'ADMIN'], (req, res) => {
+            res.success('Compras Page');
+        });
 
         this.post('/', ['PUBLIC'], (req, res) => {
             res.send('Objeto Creado..!!');
-        })
+        });
+
+        this.get('/admin-panel', ['ADMIN'], this.mostrarAdminPanel);
     }
 }
+
+module.exports = UsuariosRouter;

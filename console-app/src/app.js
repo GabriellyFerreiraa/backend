@@ -1,6 +1,6 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import exphbs from 'express-handlebars';
+import expressHandlebars from 'express-handlebars'; 
 import path from 'path';
 
 import { router as heroesRouter } from './routes/heroes.router.js';
@@ -13,7 +13,7 @@ const app = express();
 const usuariosRouter = new UsuariosRouter();
 const sessionsRouter = new SessionsRouter();
 
-app.engine('handlebars', exphbs({ defaultLayout: 'main' }));
+app.engine('handlebars', expressHandlebars({ defaultLayout: 'main' }));
 app.set('view engine', 'handlebars');
 app.set('views', path.join(__dirname, 'views'));
 
